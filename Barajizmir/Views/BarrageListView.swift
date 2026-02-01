@@ -19,7 +19,6 @@ struct BarrageListView: View {
                     }
                     .onAppear {
                         print("⏳ Empty list screen showing - barrage count: \(viewModel.barrages.count)")
-                        checkAndRequestReview()
                     }
                 } else {
                     List {
@@ -65,10 +64,8 @@ struct BarrageListView: View {
     
     private func checkAndRequestReview() {
         Task { @MainActor in
-            ReviewManager.shared.incrementLaunchCount()
-            
             if ReviewManager.shared.shouldRequestReview() {
-                try? await Task.sleep(for: .seconds(2))
+                try? await Task.sleep(for: .seconds(1.5))
                 requestReview()
                 ReviewManager.shared.markReviewRequested()
             }

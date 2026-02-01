@@ -9,6 +9,12 @@ import SwiftUI
 
 @main
 struct BarajizmirApp: App {
+    init() {
+        Task { @MainActor in
+            ReviewManager.shared.incrementLaunchCount()
+        }
+    }
+    
     var body: some Scene {
         WindowGroup {
             BarrageListView()

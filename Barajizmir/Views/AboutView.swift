@@ -62,10 +62,10 @@ struct AboutView: View {
                 }
             }
             .padding(.horizontal, 20)
-            .padding(.top, 32)
+            .padding(.top, 40)
             .padding(.bottom, 12)
             
-            Text("#suhayattır")
+            Text("Su Hayattır")
                 .font(.system(size: 10))
                 .foregroundColor(.secondary.opacity(0.5))
         }
