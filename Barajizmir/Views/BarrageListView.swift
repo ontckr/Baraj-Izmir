@@ -1,8 +1,10 @@
 import SwiftUI
+import StoreKit
 
 struct BarrageListView: View {
     @StateObject private var viewModel = BarrageViewModel()
     @State private var showAboutSheet = false
+    @Environment(\.requestReview) private var requestReview
     
     var body: some View {
         NavigationStack {
@@ -17,6 +19,7 @@ struct BarrageListView: View {
                     }
                     .onAppear {
                         print("⏳ Empty list screen showing - barrage count: \(viewModel.barrages.count)")
+                        checkAndRequestReview()
                     }
                 } else {
                     List {
@@ -37,6 +40,9 @@ struct BarrageListView: View {
                     .refreshable {
                         await viewModel.refresh()
                     }
+                    .onAppear {
+                        checkAndRequestReview()
+                    }
                 }
             }
             .navigationTitle("Baraj İzmir")
@@ -53,6 +59,18 @@ struct BarrageListView: View {
                 AboutView()
                     .presentationDetents([.height(200)])
                     .presentationDragIndicator(.visible)
+            }
+        }
+    }
+    
+    private func checkAndRequestReview() {
+        Task { @MainActor in
+            ReviewManager.shared.incrementLaunchCount()
+            
+            if ReviewManager.shared.shouldRequestReview() {
+                try? await Task.sleep(for: .seconds(2))
+                requestReview()
+                ReviewManager.shared.markReviewRequested()
             }
         }
     }

@@ -5,6 +5,7 @@ struct BarrageDetailView: View {
     
     @StateObject private var motionManager = MotionManager()
     @State private var waveOffset: Double = 0
+    @State private var showShareSheet = false
     
     var body: some View {
         ScrollView {
@@ -17,6 +18,18 @@ struct BarrageDetailView: View {
         }
         .navigationTitle(barrage.barajAdi)
         .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    showShareSheet = true
+                } label: {
+                    Image(systemName: "square.and.arrow.up")
+                }
+            }
+        }
+        .sheet(isPresented: $showShareSheet) {
+            ShareSheet(activityItems: [shareText])
+        }
         .onAppear {
             // Only start motion updates and wave animation if there's water
             if barrage.dolulukOrani > 0 {
@@ -40,7 +53,6 @@ struct BarrageDetailView: View {
                                 .fill(Color(uiColor: .systemBackground))
                         )
                     
-                    // Only show water if fill percentage > 0
                     if barrage.dolulukOrani > 0 {
                         WaterWave(
                             fillPercentage: barrage.dolulukOrani,
@@ -144,6 +156,41 @@ struct BarrageDetailView: View {
             waveOffset = .pi * 2
         }
     }
+    
+    private var shareText: String {
+        let tarih: String
+        if let guncellemeTarihi = barrage.guncellemeTarihi {
+            tarih = guncellemeTarihi.formatDate()
+        } else {
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "tr_TR")
+            formatter.dateFormat = "d MMMM yyyy"
+            tarih = formatter.string(from: Date())
+        }
+        
+        var text = "\(tarih) \(barrage.barajAdi) doluluk oranı %\(barrage.dolulukOrani)"
+        
+        if let suSeviyesi = barrage.suSeviyesi {
+            let suYuksekligiFormatted = String(format: "%.1f", suSeviyesi)
+            text += ", su yükseliği \(suYuksekligiFormatted) metre."
+        }
+        
+        return text
+    }
+}
+
+struct ShareSheet: UIViewControllerRepresentable {
+    let activityItems: [Any]
+    
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let controller = UIActivityViewController(
+            activityItems: activityItems,
+            applicationActivities: nil
+        )
+        return controller
+    }
+    
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 
