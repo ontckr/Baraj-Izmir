@@ -2,6 +2,7 @@ import SwiftUI
 
 struct BarrageListView: View {
     @StateObject private var viewModel = BarrageViewModel()
+    @State private var showAboutSheet = false
     
     var body: some View {
         NavigationStack {
@@ -32,17 +33,6 @@ struct BarrageListView: View {
                                     .textCase(nil)
                             }
                         }
-                        
-                        Section {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Gizlilik ve Kullanım")
-                                    .font(.headline)
-                                Text("Bu uygulama İzmir Büyükşehir Belediyesi'nin açık veri API'sini kullanmaktadır. Veriler anlık olarak güncellenmekte ve cihazınızda saklanmaktadır.")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            .padding(.vertical, 4)
-                        }
                     }
                     .refreshable {
                         await viewModel.refresh()
@@ -50,6 +40,20 @@ struct BarrageListView: View {
                 }
             }
             .navigationTitle("Baraj İzmir")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        showAboutSheet = true
+                    } label: {
+                        Image(systemName: "info.circle")
+                    }
+                }
+            }
+            .sheet(isPresented: $showAboutSheet) {
+                AboutView()
+                    .presentationDetents([.height(200)])
+                    .presentationDragIndicator(.visible)
+            }
         }
     }
 }

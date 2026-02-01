@@ -11,21 +11,25 @@ struct WaterBubbles: View {
     
     var body: some View {
         ZStack {
-            ForEach(bubbleKeys, id: \.self) { key in
-                BubbleView(
-                    key: key,
-                    fillPercentage: fillPercentage,
-                    containerHeight: containerHeight,
-                    containerWidth: containerWidth,
-                    isBurst: burstBubbleKeys.contains(key)
-                )
+            if fillPercentage > 0 {
+                ForEach(bubbleKeys, id: \.self) { key in
+                    BubbleView(
+                        key: key,
+                        fillPercentage: fillPercentage,
+                        containerHeight: containerHeight,
+                        containerWidth: containerWidth,
+                        isBurst: burstBubbleKeys.contains(key)
+                    )
+                }
             }
         }
         .onAppear {
-            startContinuousBubbles()
+            if fillPercentage > 0 {
+                startContinuousBubbles()
+            }
         }
         .onChange(of: shakeIntensity) { oldValue, newValue in
-            if newValue > 0.2 {
+            if fillPercentage > 0 && newValue > 0.2 {
                 createBurstBubbles(intensity: newValue)
             }
         }

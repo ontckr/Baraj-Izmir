@@ -18,8 +18,11 @@ struct BarrageDetailView: View {
         .navigationTitle(barrage.barajAdi)
         .navigationBarTitleDisplayMode(.large)
         .onAppear {
-            motionManager.startMotionUpdates()
-            startWaveAnimation()
+            // Only start motion updates and wave animation if there's water
+            if barrage.dolulukOrani > 0 {
+                motionManager.startMotionUpdates()
+                startWaveAnimation()
+            }
         }
         .onDisappear {
             motionManager.stopMotionUpdates()
@@ -37,43 +40,46 @@ struct BarrageDetailView: View {
                                 .fill(Color(uiColor: .systemBackground))
                         )
                     
-                    WaterWave(
-                        fillPercentage: barrage.dolulukOrani,
-                        waveOffset: waveOffset,
-                        gravityX: motionManager.gravityX,
-                        gravityY: motionManager.gravityY,
-                        gravityZ: motionManager.gravityZ,
-                        shakeIntensity: motionManager.shakeIntensity
-                    )
-                    .fill(
-                        LinearGradient(
-                            gradient: Gradient(colors: [
-                                Color(red: 0.4, green: 0.7, blue: 0.9),
-                                Color(red: 0.2, green: 0.5, blue: 0.8)
-                            ]),
-                            startPoint: .top,
-                            endPoint: .bottom
+                    // Only show water if fill percentage > 0
+                    if barrage.dolulukOrani > 0 {
+                        WaterWave(
+                            fillPercentage: barrage.dolulukOrani,
+                            waveOffset: waveOffset,
+                            gravityX: motionManager.gravityX,
+                            gravityY: motionManager.gravityY,
+                            gravityZ: motionManager.gravityZ,
+                            shakeIntensity: motionManager.shakeIntensity
                         )
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                    .animation(.interactiveSpring(response: 0.6, dampingFraction: 0.75), value: motionManager.gravityX)
-                    .animation(.interactiveSpring(response: 0.6, dampingFraction: 0.75), value: motionManager.gravityY)
-                    .animation(.interactiveSpring(response: 0.6, dampingFraction: 0.75), value: motionManager.gravityZ)
-                    
-                    WaterBubbles(
-                        shakeIntensity: motionManager.shakeIntensity,
-                        fillPercentage: barrage.dolulukOrani,
-                        containerHeight: geometry.size.height,
-                        containerWidth: geometry.size.width
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .fill(
+                            LinearGradient(
+                                gradient: Gradient(colors: [
+                                    Color(red: 0.4, green: 0.7, blue: 0.9),
+                                    Color(red: 0.2, green: 0.5, blue: 0.8)
+                                ]),
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .animation(.interactiveSpring(response: 0.6, dampingFraction: 0.75), value: motionManager.gravityX)
+                        .animation(.interactiveSpring(response: 0.6, dampingFraction: 0.75), value: motionManager.gravityY)
+                        .animation(.interactiveSpring(response: 0.6, dampingFraction: 0.75), value: motionManager.gravityZ)
+                        
+                        WaterBubbles(
+                            shakeIntensity: motionManager.shakeIntensity,
+                            fillPercentage: barrage.dolulukOrani,
+                            containerHeight: geometry.size.height,
+                            containerWidth: geometry.size.width
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                    }
                     
                     VStack {
                         Spacer()
                         Text("%\(String(format: "%.1f", barrage.dolulukOrani))")
                             .font(.system(size: 72, weight: .bold, design: .rounded))
-                            .foregroundColor(.white)
-                            .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+                            .foregroundColor(barrage.dolulukOrani > 0 ? .white : .primary)
+                            .shadow(color: barrage.dolulukOrani > 0 ? .black.opacity(0.3) : .clear, radius: 4, x: 0, y: 2)
                         Spacer()
                     }
                 }
