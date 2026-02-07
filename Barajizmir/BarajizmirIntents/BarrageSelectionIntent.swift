@@ -35,7 +35,7 @@ struct BarrageEntity: AppEntity {
 
 struct BarrageQuery: EntityQuery {
     func entities(for identifiers: [BarrageEntity.ID]) async throws -> [BarrageEntity] {
-        guard let result = SharedDataManager.loadCachedBarrages() else {
+        guard let result = await SharedDataManager.loadCachedBarrages() else {
             return []
         }
         
@@ -46,7 +46,7 @@ struct BarrageQuery: EntityQuery {
     }
     
     func suggestedEntities() async throws -> [BarrageEntity] {
-        guard let result = SharedDataManager.loadCachedBarrages() else {
+        guard let result = await SharedDataManager.loadCachedBarrages() else {
             return []
         }
         
@@ -56,13 +56,48 @@ struct BarrageQuery: EntityQuery {
     }
     
     func entities(matching string: String) async throws -> [BarrageEntity] {
-        guard let result = SharedDataManager.loadCachedBarrages() else {
+        guard let result = await SharedDataManager.loadCachedBarrages() else {
             return []
         }
         
-        let searchTerm = string.lowercased()
+        let normalizedSearch = normalizeTurkishSearch(string)
+        
         return result.barrages
-            .filter { $0.barajAdi.lowercased().contains(searchTerm) }
-            .map { BarrageEntity(id: $0.id, name: $0.barajAdi) }
+            .compactMap { barrage -> BarrageEntity? in
+                let normalizedName = normalizeTurkishSearch(barrage.barajAdi)
+                
+                if normalizedName.contains(normalizedSearch) || normalizedSearch.contains(normalizedName) {
+                    return BarrageEntity(id: barrage.id, name: barrage.barajAdi)
+                }
+                
+                let searchWords = normalizedSearch.split(separator: " ").map(String.init)
+                let nameWords = normalizedName.split(separator: " ").map(String.init)
+                
+                for searchWord in searchWords {
+                    if searchWord.count > 2 {
+                        for nameWord in nameWords {
+                            if nameWord.contains(searchWord) || searchWord.contains(nameWord) {
+                                return BarrageEntity(id: barrage.id, name: barrage.barajAdi)
+                            }
+                        }
+                    }
+                }
+                
+                return nil
+            }
+    }
+    
+    private func normalizeTurkishSearch(_ text: String) -> String {
+        var normalized = text.lowercased()
+        
+        let commonWords = ["barajı", "baraj", "izmir", "doluluk", "oranı", "oran", "kaç", "yüzde", "durumu", "durum", "nedir", "ne"]
+        for word in commonWords {
+            normalized = normalized.replacingOccurrences(of: word, with: "", options: .caseInsensitive)
+        }
+        
+        normalized = normalized.trimmingCharacters(in: .whitespaces)
+        normalized = normalized.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+        
+        return normalized
     }
 }

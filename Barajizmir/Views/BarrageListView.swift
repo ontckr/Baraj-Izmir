@@ -56,7 +56,7 @@ struct BarrageListView: View {
             }
             .sheet(isPresented: $showAboutSheet) {
                 AboutView()
-                    .presentationDetents([.height(200)])
+                    .presentationDetents([.height(300)])
                     .presentationDragIndicator(.visible)
             }
         }
