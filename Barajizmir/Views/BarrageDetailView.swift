@@ -31,7 +31,6 @@ struct BarrageDetailView: View {
             ShareSheet(activityItems: [shareText])
         }
         .onAppear {
-            // Only start motion updates and wave animation if there's water
             if barrage.dolulukOrani > 0 {
                 motionManager.startMotionUpdates()
                 startWaveAnimation()

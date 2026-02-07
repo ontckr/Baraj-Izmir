@@ -25,7 +25,6 @@ struct WaterWave: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
         
-        // If fill percentage is 0 or less, return empty path
         guard fillPercentage > 0 else {
             return path
         }

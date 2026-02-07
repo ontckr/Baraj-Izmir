@@ -3,6 +3,12 @@ import Foundation
 actor BarrageService {
     static let shared = BarrageService()
     
+    private let appGroupIdentifier = "group.onatcakir.Barajizmir"
+    
+    private var sharedUserDefaults: UserDefaults? {
+        UserDefaults(suiteName: appGroupIdentifier)
+    }
+    
     private let apiURL = URL(string: "https://openapi.izmir.bel.tr/api/izsu/barajdurum")!
     private let cacheKey = "cached_barrages"
     private let lastUpdateKey = "last_update_date"
@@ -57,10 +63,19 @@ actor BarrageService {
     }
     
     private func cacheBarrages(_ barrages: [Barrage], date: Date) async {
+        guard let sharedDefaults = sharedUserDefaults else {
+            if let encoded = try? JSONEncoder().encode(barrages) {
+                UserDefaults.standard.set(encoded, forKey: cacheKey)
+                UserDefaults.standard.set(date, forKey: lastUpdateKey)
+                print("✅ Cache updated (fallback to standard)")
+            }
+            return
+        }
+        
         if let encoded = try? JSONEncoder().encode(barrages) {
-            UserDefaults.standard.set(encoded, forKey: cacheKey)
-            UserDefaults.standard.set(date, forKey: lastUpdateKey)
-            print("✅ Cache updated")
+            sharedDefaults.set(encoded, forKey: cacheKey)
+            sharedDefaults.set(date, forKey: lastUpdateKey)
+            print("✅ Cache updated (App Group)")
         } else {
             print("⚠️ Failed to save cache")
         }
@@ -68,9 +83,12 @@ actor BarrageService {
     
     func loadCachedBarrages() async -> (barrages: [Barrage], lastUpdate: Date)? {
         print("📂 Loading from cache...")
-        guard let data = UserDefaults.standard.data(forKey: cacheKey),
+        
+        let defaults = sharedUserDefaults ?? UserDefaults.standard
+        
+        guard let data = defaults.data(forKey: cacheKey),
               let barrages = try? JSONDecoder().decode([Barrage].self, from: data),
-              let lastUpdate = UserDefaults.standard.object(forKey: lastUpdateKey) as? Date else {
+              let lastUpdate = defaults.object(forKey: lastUpdateKey) as? Date else {
             print("⚠️ No cached data found")
             return nil
         }
