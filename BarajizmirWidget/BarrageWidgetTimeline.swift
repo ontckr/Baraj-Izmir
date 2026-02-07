@@ -27,7 +27,10 @@ struct BarrageWidgetTimeline: AppIntentTimelineProvider {
                 barajAdi: "Örnek Baraj",
                 dolulukOrani: 75.5,
                 hacim: nil,
+                mevcutSuDurumu: nil,
                 suSeviyesi: nil,
+                maksimumSuYuksekligi: nil,
+                minimumSuYuksekligi: nil,
                 guncellemeTarihi: nil
             ),
             lastUpdate: Date(),

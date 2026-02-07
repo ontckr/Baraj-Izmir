@@ -95,18 +95,23 @@ struct BarrageDetailView: View {
                     }
                 }
             }
-            .frame(height: 400)
+            .frame(height: 350)
         }
     }
     
     private var barrageInformation: some View {
         VStack(spacing: 16) {
-            informationRow(title: "Baraj Adı", value: barrage.barajAdi)
-            
             informationRow(
                 title: "Doluluk Oranı",
                 value: "%\(String(format: "%.1f", barrage.dolulukOrani))"
             )
+            
+            if let mevcutSu = barrage.mevcutSuDurumu {
+                informationRow(
+                    title: "Mevcut Su Durumu",
+                    value: "\(mevcutSu.formatWithDots()) m³"
+                )
+            }
             
             if let hacim = barrage.hacim {
                 informationRow(
@@ -119,6 +124,14 @@ struct BarrageDetailView: View {
                 informationRow(
                     title: "Su Yüksekliği",
                     value: "\(String(format: "%.2f", suSeviyesi)) m"
+                )
+            }
+            
+            if let minYukseklik = barrage.minimumSuYuksekligi,
+               let maxYukseklik = barrage.maksimumSuYuksekligi {
+                informationRow(
+                    title: "Su Yüksekliği Aralığı",
+                    value: "\(String(format: "%.1f", minYukseklik)) - \(String(format: "%.1f", maxYukseklik)) m"
                 )
             }
             
@@ -200,8 +213,11 @@ struct ShareSheet: UIViewControllerRepresentable {
             barajAdi: "Balçova Barajı",
             dolulukOrani: 45.0,
             hacim: 7759000,
-            suSeviyesi: 124.02,
-            guncellemeTarihi: "2026-01-31T00:00:00"
+            mevcutSuDurumu: 3560000,
+            suSeviyesi: 131.56,
+            maksimumSuYuksekligi: 146.0,
+            minimumSuYuksekligi: 103.06,
+            guncellemeTarihi: "2026-02-07T00:00:00"
         ))
     }
 }

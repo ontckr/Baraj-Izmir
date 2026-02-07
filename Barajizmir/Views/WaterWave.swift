@@ -37,7 +37,7 @@ struct WaterWave: Shape {
         
         let baseY = rect.height * (1.0 - fillPercentage / 100.0)
         
-        let gravityOffsetX = gravityX
+        let gravityOffsetX = -gravityX
         let gravityOffsetY = gravityY + 1.0
         
         path.move(to: CGPoint(x: 0, y: rect.height))

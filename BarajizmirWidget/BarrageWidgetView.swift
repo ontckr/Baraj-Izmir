@@ -133,7 +133,10 @@ struct BarrageWidgetView: View {
             barajAdi: "Alaçatı Kutlu Aktaş Barajı",
             dolulukOrani: 44.2,
             hacim: nil,
+            mevcutSuDurumu: nil,
             suSeviyesi: nil,
+            maksimumSuYuksekligi: nil,
+            minimumSuYuksekligi: nil,
             guncellemeTarihi: nil
         ),
         lastUpdate: Date(),

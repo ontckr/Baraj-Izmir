@@ -36,12 +36,12 @@ struct WaterBubbles: View {
     }
     
     private func startContinuousBubbles() {
-        let baseCount = max(4, Int(fillPercentage / 10.0))
+        let baseCount = min(max(4, Int(fillPercentage / 10.0)), 12)
         bubbleKeys = (0..<baseCount).map { _ in UUID() }
     }
     
     private func createBurstBubbles(intensity: Double) {
-        let bubbleCount = Int(intensity * 30)
+        let bubbleCount = min(Int(intensity * 12), 15)
         let newKeys = (0..<bubbleCount).map { _ in UUID() }
         bubbleKeys.append(contentsOf: newKeys)
         burstBubbleKeys.formUnion(newKeys)
@@ -92,7 +92,8 @@ struct BubbleView: View {
         let waterTop = containerHeight * (1.0 - fillPercentage / 100.0)
         let waterBottom = containerHeight
         
-        x = CGFloat.random(in: 25...(containerWidth - 25))
+        let margin: CGFloat = 8
+        x = CGFloat.random(in: margin...(containerWidth - margin))
         y = CGFloat.random(in: waterTop...waterBottom)
         
         if isBurst {
@@ -117,8 +118,9 @@ struct BubbleView: View {
             let waterTop = containerHeight * (1.0 - fillPercentage / 100.0)
             let waterBottom = containerHeight
             
+            let margin: CGFloat = 8
             y = CGFloat.random(in: waterTop...waterBottom)
-            x = CGFloat.random(in: 25...(containerWidth - 25))
+            x = CGFloat.random(in: margin...(containerWidth - margin))
             size = CGFloat.random(in: 2...5)
             opacity = Double.random(in: 0.2...0.5)
             
