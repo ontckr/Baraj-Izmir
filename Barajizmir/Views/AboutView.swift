@@ -46,6 +46,28 @@ struct AboutView: View {
                 
                 Divider()
                 
+                if #available(iOS 17.0, *) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "mic.fill")
+                                .foregroundColor(.blue)
+                                .font(.system(size: 14))
+                            Text("Siri ile Kullanım")
+                                .font(.subheadline.bold())
+                        }
+                        Text("Siri'ye \"Baraj İzmir ile barajların doluluk oranlarını söyle\" veya \"Baraj İzmir barajlar dolu mu?\" diyerek barajların doluluk oranlarını öğrenebilirsiniz.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .lineLimit(nil)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.top, 2)
+                    }
+                    .padding(.vertical, 4)
+                    
+                    Divider()
+                }
+                
                 Link(destination: URL(string: "https://ontckr.github.io/Baraj-Izmir/privacy-policy.html")!) {
                     HStack(spacing: 8) {
                         Image(systemName: "lock.shield.fill")
