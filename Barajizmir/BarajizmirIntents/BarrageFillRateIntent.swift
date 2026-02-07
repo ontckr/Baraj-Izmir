@@ -4,7 +4,7 @@ import Foundation
 @available(iOS 17.0, *)
 struct BarrageFillRateIntent: AppIntent {
     static var title: LocalizedStringResource = "Baraj Doluluk Oranı Sorgula"
-    static var description = IntentDescription("Barajların doluluk oranlarını öğrenmek için Siri'ye sorun")
+    static var description = IntentDescription("Barajların doluluk oranlarını öğrenmek için sorun")
     
     static var openAppWhenRun: Bool = false
     
