@@ -16,9 +16,9 @@ struct BarrageDetailView: View {
                     stalenessView(message: warning)
                 }
 
-                BarrageHistoryChartView(barrage: barrage)
-
                 barrageInformation
+
+                BarrageHistoryChartView(barrage: barrage)
 
                 BarrageNotificationSection(barrage: barrage)
             }

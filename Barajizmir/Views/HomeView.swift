@@ -30,7 +30,6 @@ struct HomeView: View {
                 isInDetail ? [.height(240), .medium, .large] : [.height(240), .medium],
                 selection: $sheetDetent
             )
-            .presentationBackground(.regularMaterial)
             .presentationBackgroundInteraction(.enabled(upThrough: .medium))
             .interactiveDismissDisabled()
             .presentationDragIndicator(.visible)

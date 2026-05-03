@@ -8,6 +8,13 @@ actor SupabaseService {
     private let projectURL = "https://tckwpqxptjfnffjvtfqb.supabase.co"
     private let anonKey    = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRja3dwcXhwdGpmbmZmanZ0ZnFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4MzI4MTEsImV4cCI6MjA5MzQwODgxMX0.4W1DQdxIag8zMpHqXpxqLOaRoimpzpOULJg_r1IOtXw"
 
+    private struct HistoryCacheEntry {
+        let data: [BarrageHistoryPoint]
+        let fetchedAt: Date
+    }
+    private var historyCache: [String: HistoryCacheEntry] = [:]
+    private let cacheTTL: TimeInterval = 3600
+
     private var headers: [String: String] {
         [
             "apikey": anonKey,
@@ -41,6 +48,12 @@ actor SupabaseService {
     // MARK: - Geçmiş veri (Swift Charts için) — direkt tablo sorgusu
 
     func fetchHistory(barrageId: Int, range: ChartRange) async -> [BarrageHistoryPoint] {
+        let cacheKey = "\(barrageId)_\(range.rawValue)"
+        if let cached = historyCache[cacheKey],
+           Date().timeIntervalSince(cached.fetchedAt) < cacheTTL {
+            return cached.data
+        }
+
         let startDate = Calendar.current.date(byAdding: .day, value: -range.days, to: Date()) ?? Date()
         let dateString = ISO8601DateFormatter().string(from: startDate)
         let query = "barrage_id=eq.\(barrageId)&captured_at=gte.\(dateString)&order=captured_at.asc&select=doluluk_orani,captured_at"
@@ -54,7 +67,9 @@ actor SupabaseService {
             let (data, _) = try await URLSession.shared.data(for: request)
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
-            return (try? decoder.decode([BarrageHistoryPoint].self, from: data)) ?? []
+            let points = (try? decoder.decode([BarrageHistoryPoint].self, from: data)) ?? []
+            historyCache[cacheKey] = HistoryCacheEntry(data: points, fetchedAt: Date())
+            return points
         } catch {
             return []
         }

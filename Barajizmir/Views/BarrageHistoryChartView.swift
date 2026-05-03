@@ -5,7 +5,7 @@ import Charts
 struct BarrageHistoryChartView: View {
     let barrage: Barrage
 
-    @State private var selectedRange: ChartRange = .month
+    @State private var selectedRange: ChartRange = .week
     @State private var data: [BarrageHistoryPoint] = []
     @State private var isLoading = false
     @State private var selectedDate: Date?
