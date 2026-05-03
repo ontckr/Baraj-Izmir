@@ -1,69 +1,51 @@
-# Baraj İzmir 💧
+# Baraj İzmir
 
-iOS app for monitoring İzmir's dam water levels with realistic water visualization and motion effects.
+İzmir'deki barajların doluluk oranlarını gerçek zamanlı olarak takip eden iOS uygulaması.
 
-## 📱 Features
+## Özellikler
 
-- **Home Screen**: Real-time barrage list sorted by fill percentage with color-coded indicators
-- **Detail Screen**: Animated water visualization with device tilt and shake detection
-- **Offline Support**: Automatic caching with silent fallback
+**Harita Görünümü** — Tüm barajlar İzmir haritasında renkli pinlerle gösterilir. Pine dokunarak baraj detayına ulaşılır.
 
-## 🎨 Water Visualization
+**Doluluk Animasyonu** — Detay ekranında gerçek doluluk oranına göre animasyonlu su görseli. Telefonu eğilterek su hareket eder, sallayınca baloncuklar çıkar.
 
-- Dynamic fill level based on actual percentage
-- Continuous sine wave animation
-- Device tilt response using CoreMotion
-- Natural blue gradient
-- 60 FPS motion updates
+**Eşik Bildirimleri** — Her baraj için özelleştirilebilir doluluk eşiği. Oran belirlenen değerin altına düşünce bildirim gelir.
 
-## 🏗️ Architecture
+**Widget** — Ana ekrana eklenebilen widget ile tek bakışta doluluk durumu.
 
-**MVVM Pattern** with SwiftUI:
-- **Model**: `Barrage` (Codable struct)
-- **ViewModel**: `BarrageViewModel` (state management)
-- **View**: `BarrageListView`, `BarrageDetailView`
-- **Service**: `BarrageService` (actor-based networking)
+**Siri Entegrasyonu** — "Barajların doluluk oranı ne?" gibi komutlarla sesli bilgi alınabilir.
 
-**Tech Stack**: Swift, SwiftUI, URLSession, CoreMotion, async/await
+## Teknik Altyapı
 
-## 📁 Project Structure
+Veriler saatte bir GitHub Actions aracılığıyla İzmir Büyükşehir Belediyesi Open API'ından çekilerek Supabase veritabanında saklanır. iOS uygulaması doğrudan Supabase'den beslenir.
 
 ```
-Barajizmir/
-├── Models/Barrage.swift
-├── Services/
-│   ├── BarrageService.swift
-│   └── MotionManager.swift
-├── ViewModels/BarrageViewModel.swift
-├── Views/
-│   ├── BarrageListView.swift
-│   ├── BarrageDetailView.swift
-│   └── WaterWave.swift
-└── Extensions/NumberFormatter+Extensions.swift
+GitHub Actions (saatlik)
+  → İzmir Open API
+  → Supabase
+
+iOS Uygulaması
+  → Supabase → Ekran
+  → App Group cache → Widget & Siri
 ```
 
-## 🌐 API
+**Kullanılan Teknolojiler:** Swift, SwiftUI, MapKit, WidgetKit, App Intents, CoreMotion, UserNotifications, BackgroundTasks, Supabase
 
-**Endpoint**: `https://openapi.izmir.bel.tr/api/izsu/barajdurum`
+## Gereksinimler
 
-Public API, no authentication required. Returns JSON array of barrage data.
-
-## 🚀 Getting Started
-
-### Requirements
 - iOS 17.0+
 - Xcode 15.0+
-- Swift 5.9+
 
-### Installation
-1. Clone repository
-2. Open `Barajizmir.xcodeproj`
-3. Build and run (⌘R)
+## Kurulum
 
-## 📄 License
+1. Repoyu klonla
+2. `Barajizmir.xcodeproj` dosyasını aç
+3. `SupabaseService.swift` içindeki `projectURL` ve `anonKey` değerlerini gir
+4. Build al ve çalıştır (⌘R)
 
-Built for İzmir residents. Data provided by [İzmir Büyükşehir Belediyesi Open Data API](https://openapi.izmir.bel.tr).
+## Veri Kaynağı
+
+[İzmir Büyükşehir Belediyesi Açık Veri Platformu](https://openapi.izmir.bel.tr)
 
 ---
 
-**Made with 💙 for İzmir**
+Made with ♥ for İzmir

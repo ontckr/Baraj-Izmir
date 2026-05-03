@@ -68,16 +68,19 @@ BarajizmirIntents/
 ### Data Flow
 
 ```
-API (izmir.bel.tr) → BarrageService (actor) → UserDefaults (App Group cache)
-                                             ↓
-                          BarrageViewModel (@MainActor) → SwiftUI Views
-                                             ↓
-                          WidgetCenter.reloadAllTimelines()  (after every successful fetch)
-                          NotificationManager.checkThresholds()  (after every successful fetch)
-                                             ↓
-                          BarrageWidgetTimeline → Widget
-                          BarrageFillRateIntent → Siri response
-                          BGAppRefreshTask → background fetch → checkThresholds
+GitHub Actions (saatlik cron)
+  → İzmir API (openapi.izmir.bel.tr)
+  → Supabase (barrage_snapshots tablosu)
+
+iOS App / BGAppRefreshTask
+  → SupabaseService.fetchLatest()  (latest_barrage_snapshots view)
+  → BarrageService.cache()  (App Group UserDefaults)
+  → BarrageViewModel (@MainActor) → SwiftUI Views
+  → WidgetCenter.reloadAllTimelines()
+  → NotificationManager.checkThresholds()
+
+BarrageWidgetTimeline → App Group cache → Widget
+BarrageFillRateIntent → App Group cache → Siri response
 ```
 
 ### Caching Strategy
@@ -211,7 +214,7 @@ Note: Main app notification slider uses slightly different thresholds (30/60) vs
 - [ ] **Dam profile pages** — Static content per dam: location, construction year, watershed, historical capacity context
 
 ### Medium Term — Depth & Differentiation
-- [ ] **Backend (Supabase)** — Hourly snapshot of API data for proprietary historical dataset
+- [x] **Backend (Supabase)** — GitHub Actions saatlik cron → barrage_snapshots tablosu. iOS app artık direkt Supabase'den beslenyor.
 - [ ] **Swift Charts historical trend** — Week/month fill rate trend per dam
 - [ ] **Medium widget + lock screen widget** — `.systemMedium`, `accessoryRectangular`, `accessoryCircular`
 
