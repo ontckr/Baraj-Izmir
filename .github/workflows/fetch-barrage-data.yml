@@ -2,7 +2,7 @@ name: Fetch Barrage Data
 
 on:
   schedule:
-    - cron: '0 * * * *'  # her saat başı
+    - cron: '0 6 * * *'  # her gün sabah 09:00 (Türkiye saati)
   workflow_dispatch:       # manuel tetikleme (test için)
 
 jobs:

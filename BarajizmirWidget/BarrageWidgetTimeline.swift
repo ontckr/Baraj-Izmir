@@ -54,7 +54,7 @@ struct BarrageWidgetTimeline: AppIntentTimelineProvider {
         
         if let lastUpdate = cachedResult?.lastUpdate {
             let dataAge = Date().timeIntervalSince(lastUpdate)
-            shouldFetchFromAPI = dataAge > 3600
+            shouldFetchFromAPI = dataAge > 86400
         } else {
             shouldFetchFromAPI = true
         }
@@ -65,7 +65,7 @@ struct BarrageWidgetTimeline: AppIntentTimelineProvider {
         
         let entry = getEntry(for: barrageId)
         
-        let nextUpdate = Date().addingTimeInterval(3600)
+        let nextUpdate = Date().addingTimeInterval(86400)
         
         return Timeline(entries: [entry], policy: .after(nextUpdate))
     }
