@@ -1,6 +1,5 @@
 import AppIntents
 
-/// App Shortcuts provider to make intents discoverable by Siri
 @available(iOS 17.0, *)
 struct BarajizmirAppShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {

@@ -8,7 +8,13 @@ struct BarrageWidgetView: View {
         switch entry.state {
         case .loaded:
             if let barrage = entry.barrage {
-                loadedView(barrage: barrage)
+                loadedView(barrage: barrage, isStale: false)
+            } else {
+                errorView
+            }
+        case .stale:
+            if let barrage = entry.barrage {
+                loadedView(barrage: barrage, isStale: true)
             } else {
                 errorView
             }
@@ -24,12 +30,20 @@ struct BarrageWidgetView: View {
     // MARK: - Loaded State
     
     @ViewBuilder
-    private func loadedView(barrage: Barrage) -> some View {
+    private func loadedView(barrage: Barrage, isStale: Bool) -> some View {
         VStack(alignment: .leading) {
-            Text(barrage.barajAdi)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(.primary)
-                .lineLimit(2)
+            HStack(alignment: .top) {
+                Text(barrage.barajAdi)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.primary)
+                    .lineLimit(2)
+                if isStale {
+                    Spacer()
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .font(.system(size: 12))
+                        .foregroundColor(.yellow)
+                }
+            }
             Spacer()
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .lastTextBaseline, spacing: 2) {
@@ -152,6 +166,27 @@ struct BarrageWidgetView: View {
         barrage: nil,
         lastUpdate: nil,
         state: .error
+    )
+}
+
+#Preview("Eski Veri", as: .systemSmall) {
+    BarrageWidget()
+} timeline: {
+    BarrageWidgetEntry(
+        date: Date(),
+        barrage: Barrage(
+            id: 2,
+            barajAdi: "Balçova Barajı",
+            dolulukOrani: 28.3,
+            hacim: nil,
+            mevcutSuDurumu: nil,
+            suSeviyesi: nil,
+            maksimumSuYuksekligi: nil,
+            minimumSuYuksekligi: nil,
+            guncellemeTarihi: nil
+        ),
+        lastUpdate: Date(),
+        state: .stale
     )
 }
 

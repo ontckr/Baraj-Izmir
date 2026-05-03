@@ -12,6 +12,7 @@ struct BarrageWidgetEntry: TimelineEntry {
         case loading
         case error
         case noSelection
+        case stale
     }
 }
 
@@ -67,6 +68,25 @@ struct BarrageWidgetTimeline: AppIntentTimelineProvider {
         return Timeline(entries: [entry], policy: .after(nextUpdate))
     }
     
+    private let appGroupIdentifier = "group.onatcakir.Barajizmir"
+
+    private func lastKnownKey(for barrageId: Int) -> String {
+        "last_known_barrage_\(barrageId)"
+    }
+
+    private func saveLastKnown(_ barrage: Barrage) {
+        guard let defaults = UserDefaults(suiteName: appGroupIdentifier),
+              let encoded = try? JSONEncoder().encode(barrage) else { return }
+        defaults.set(encoded, forKey: lastKnownKey(for: barrage.id))
+    }
+
+    private func loadLastKnown(for barrageId: Int) -> Barrage? {
+        guard let defaults = UserDefaults(suiteName: appGroupIdentifier),
+              let data = defaults.data(forKey: lastKnownKey(for: barrageId)),
+              let barrage = try? JSONDecoder().decode(Barrage.self, from: data) else { return nil }
+        return barrage
+    }
+
     private func fetchAndCacheBarrages() async {
         let apiURL = URL(string: "https://openapi.izmir.bel.tr/api/izsu/barajdurum")!
         let appGroupIdentifier = "group.onatcakir.Barajizmir"
@@ -92,38 +112,23 @@ struct BarrageWidgetTimeline: AppIntentTimelineProvider {
     
     private func getEntry(for barrageId: String?) -> BarrageWidgetEntry {
         guard let result = SharedDataManager.loadCachedBarrages() else {
-            return BarrageWidgetEntry(
-                date: Date(),
-                barrage: nil,
-                lastUpdate: nil,
-                state: .error
-            )
+            return BarrageWidgetEntry(date: Date(), barrage: nil, lastUpdate: nil, state: .error)
         }
-        
+
         guard let barrageIdString = barrageId,
               let barrageIdInt = Int(barrageIdString) else {
-            return BarrageWidgetEntry(
-                date: Date(),
-                barrage: nil,
-                lastUpdate: result.lastUpdate,
-                state: .noSelection
-            )
+            return BarrageWidgetEntry(date: Date(), barrage: nil, lastUpdate: result.lastUpdate, state: .noSelection)
         }
-        
-        guard let barrage = result.barrages.first(where: { $0.id == barrageIdInt }) else {
-            return BarrageWidgetEntry(
-                date: Date(),
-                barrage: nil,
-                lastUpdate: result.lastUpdate,
-                state: .noSelection
-            )
+
+        if let barrage = result.barrages.first(where: { $0.id == barrageIdInt }) {
+            saveLastKnown(barrage)
+            return BarrageWidgetEntry(date: Date(), barrage: barrage, lastUpdate: result.lastUpdate, state: .loaded)
         }
-        
-        return BarrageWidgetEntry(
-            date: Date(),
-            barrage: barrage,
-            lastUpdate: result.lastUpdate,
-            state: .loaded
-        )
+
+        if let lastKnown = loadLastKnown(for: barrageIdInt) {
+            return BarrageWidgetEntry(date: Date(), barrage: lastKnown, lastUpdate: result.lastUpdate, state: .stale)
+        }
+
+        return BarrageWidgetEntry(date: Date(), barrage: nil, lastUpdate: result.lastUpdate, state: .error)
     }
 }

@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import WidgetKit
 
 @MainActor
 class BarrageViewModel: ObservableObject {
@@ -21,10 +22,12 @@ class BarrageViewModel: ObservableObject {
             barrages = result.barrages.sorted { $0.dolulukOrani > $1.dolulukOrani }
             lastUpdate = result.lastUpdate
             print("✅ UI updated - displaying \(barrages.count) barrages")
-            
+
             for barrage in barrages {
                 print("   📊 \(barrage.barajAdi): %\(barrage.dolulukOrani)")
             }
+
+            WidgetCenter.shared.reloadAllTimelines()
         } else {
             print("❌ No data received!")
         }

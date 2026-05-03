@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /Users/onatcakir/Documents/Development/Barajizmir log --oneline)"
+    ]
+  }
+}
