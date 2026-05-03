@@ -27,35 +27,36 @@ class MotionManager: ObservableObject {
         
         motionManager.startDeviceMotionUpdates(using: .xArbitraryZVertical, to: .main) { [weak self] motion, _ in
             guard let self = self, let motion = motion else { return }
-            
-            let gravity = motion.gravity
-            
-            self.targetGravityX = gravity.x
-            self.targetGravityY = gravity.y
-            self.targetGravityZ = gravity.z
-            
-            let damping: Double = 0.85
-            self.gravityX = self.gravityX * damping + self.targetGravityX * (1.0 - damping)
-            self.gravityY = self.gravityY * damping + self.targetGravityY * (1.0 - damping)
-            self.gravityZ = self.gravityZ * damping + self.targetGravityZ * (1.0 - damping)
-            
-            let acceleration = motion.userAcceleration
-            let magnitude = sqrt(
-                acceleration.x * acceleration.x +
-                acceleration.y * acceleration.y +
-                acceleration.z * acceleration.z
-            )
-            
-            if magnitude > self.shakeThreshold {
-                let now = Date()
-                if now.timeIntervalSince(self.lastShakeTime) > self.shakeCooldown {
-                    self.lastShakeTime = now
-                    self.triggerShake()
+            MainActor.assumeIsolated {
+                let gravity = motion.gravity
+
+                self.targetGravityX = gravity.x
+                self.targetGravityY = gravity.y
+                self.targetGravityZ = gravity.z
+
+                let damping: Double = 0.85
+                self.gravityX = self.gravityX * damping + self.targetGravityX * (1.0 - damping)
+                self.gravityY = self.gravityY * damping + self.targetGravityY * (1.0 - damping)
+                self.gravityZ = self.gravityZ * damping + self.targetGravityZ * (1.0 - damping)
+
+                let acceleration = motion.userAcceleration
+                let magnitude = sqrt(
+                    acceleration.x * acceleration.x +
+                    acceleration.y * acceleration.y +
+                    acceleration.z * acceleration.z
+                )
+
+                if magnitude > self.shakeThreshold {
+                    let now = Date()
+                    if now.timeIntervalSince(self.lastShakeTime) > self.shakeCooldown {
+                        self.lastShakeTime = now
+                        self.triggerShake()
+                    }
                 }
-            }
-            
-            if self.shakeIntensity > 0 {
-                self.shakeIntensity = max(0, self.shakeIntensity - 0.03)
+
+                if self.shakeIntensity > 0 {
+                    self.shakeIntensity = max(0, self.shakeIntensity - 0.03)
+                }
             }
         }
     }

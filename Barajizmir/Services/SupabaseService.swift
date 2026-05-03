@@ -29,7 +29,7 @@ actor SupabaseService {
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
             let snapshots = try decoder.decode([BarrageSnapshot].self, from: data)
-            let barrages = snapshots.map(\.barrage)
+            let barrages = snapshots.map { $0.makeBarrage() }
             let now = Date()
             await BarrageService.shared.cache(barrages, date: now)
             return (barrages, now)
@@ -38,18 +38,14 @@ actor SupabaseService {
         }
     }
 
-    // MARK: - Geçmiş veri (Swift Charts için)
+    // MARK: - Geçmiş veri (Swift Charts için) — direkt tablo sorgusu
 
-    func fetchHistory(barrageId: Int, days: Int = 30) async -> [BarrageHistoryPoint] {
-        let since = ISO8601DateFormatter().string(
-            from: Calendar.current.date(byAdding: .day, value: -days, to: Date()) ?? Date()
-        )
-        let urlStr = "\(projectURL)/rest/v1/barrage_snapshots"
-            + "?barrage_id=eq.\(barrageId)"
-            + "&captured_at=gte.\(since)"
-            + "&select=doluluk_orani,captured_at"
-            + "&order=captured_at.asc"
-        guard let url = URL(string: urlStr) else { return [] }
+    func fetchHistory(barrageId: Int, range: ChartRange) async -> [BarrageHistoryPoint] {
+        let startDate = Calendar.current.date(byAdding: .day, value: -range.days, to: Date()) ?? Date()
+        let dateString = ISO8601DateFormatter().string(from: startDate)
+        let query = "barrage_id=eq.\(barrageId)&captured_at=gte.\(dateString)&order=captured_at.asc&select=doluluk_orani,captured_at"
+
+        guard let url = URL(string: "\(projectURL)/rest/v1/barrage_snapshots?\(query)") else { return [] }
 
         var request = URLRequest(url: url)
         headers.forEach { request.setValue($1, forHTTPHeaderField: $0) }
@@ -57,18 +53,7 @@ actor SupabaseService {
         do {
             let (data, _) = try await URLSession.shared.data(for: request)
             let decoder = JSONDecoder()
-            decoder.dateDecodingStrategy = .custom { decoder in
-                let str = try decoder.singleValueContainer().decode(String.self)
-                let formatter = ISO8601DateFormatter()
-                formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-                if let date = formatter.date(from: str) { return date }
-                formatter.formatOptions = [.withInternetDateTime]
-                if let date = formatter.date(from: str) { return date }
-                throw DecodingError.dataCorruptedError(
-                    in: try decoder.singleValueContainer(),
-                    debugDescription: "Invalid date: \(str)"
-                )
-            }
+            decoder.dateDecodingStrategy = .iso8601
             return (try? decoder.decode([BarrageHistoryPoint].self, from: data)) ?? []
         } catch {
             return []
@@ -107,7 +92,7 @@ private struct BarrageSnapshot: Decodable {
         case capturedAt           = "captured_at"
     }
 
-    var barrage: Barrage {
+    func makeBarrage() -> Barrage {
         var b = Barrage(
             id: barrageId,
             barajAdi: barajAdi,
@@ -136,3 +121,4 @@ struct BarrageHistoryPoint: Decodable, Identifiable {
         case capturedAt   = "captured_at"
     }
 }
+

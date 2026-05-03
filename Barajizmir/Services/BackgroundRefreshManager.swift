@@ -1,15 +1,19 @@
 import BackgroundTasks
 import Foundation
 
-final class BackgroundRefreshManager {
+final class BackgroundRefreshManager: @unchecked Sendable {
     static let shared = BackgroundRefreshManager()
     private init() {}
 
     private let taskIdentifier = "onatcakir.Barajizmir.refresh"
 
     func registerHandler() {
-        BGTaskScheduler.shared.register(forTaskWithIdentifier: taskIdentifier, using: nil) { task in
-            self.handleRefresh(task: task as! BGAppRefreshTask)
+        BGTaskScheduler.shared.register(forTaskWithIdentifier: taskIdentifier, using: nil) { [weak self] task in
+            guard let self, let refreshTask = task as? BGAppRefreshTask else {
+                task.setTaskCompleted(success: false)
+                return
+            }
+            self.handleRefresh(task: refreshTask)
         }
     }
 

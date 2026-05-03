@@ -43,30 +43,27 @@ struct BarrageWidgetTimeline: AppIntentTimelineProvider {
     
     func snapshot(for configuration: BarrageSelectionIntent, in context: Context) async -> BarrageWidgetEntry {
         let barrageId = configuration.barrage?.id
-        return getEntry(for: barrageId)
+        let cached = await MainActor.run { SharedDataManager.loadCachedBarrages() }
+        return getEntry(for: barrageId, cachedResult: cached)
     }
-    
+
     func timeline(for configuration: BarrageSelectionIntent, in context: Context) async -> Timeline<BarrageWidgetEntry> {
         let barrageId = configuration.barrage?.id
-        
-        let cachedResult = SharedDataManager.loadCachedBarrages()
-        let shouldFetchFromAPI: Bool
-        
+
+        let cachedResult = await MainActor.run { SharedDataManager.loadCachedBarrages() }
+
         if let lastUpdate = cachedResult?.lastUpdate {
-            let dataAge = Date().timeIntervalSince(lastUpdate)
-            shouldFetchFromAPI = dataAge > 86400
+            if Date().timeIntervalSince(lastUpdate) > 86400 {
+                await fetchAndCacheBarrages()
+            }
         } else {
-            shouldFetchFromAPI = true
-        }
-        
-        if shouldFetchFromAPI {
             await fetchAndCacheBarrages()
         }
-        
-        let entry = getEntry(for: barrageId)
-        
+
+        let refreshedCache = await MainActor.run { SharedDataManager.loadCachedBarrages() }
+        let entry = getEntry(for: barrageId, cachedResult: refreshedCache)
         let nextUpdate = Date().addingTimeInterval(86400)
-        
+
         return Timeline(entries: [entry], policy: .after(nextUpdate))
     }
     
@@ -160,8 +157,11 @@ struct BarrageWidgetTimeline: AppIntentTimelineProvider {
         }
     }
     
-    private func getEntry(for barrageId: String?) -> BarrageWidgetEntry {
-        guard let result = SharedDataManager.loadCachedBarrages() else {
+    private func getEntry(
+        for barrageId: String?,
+        cachedResult: (barrages: [Barrage], lastUpdate: Date)?
+    ) -> BarrageWidgetEntry {
+        guard let result = cachedResult else {
             return BarrageWidgetEntry(date: Date(), barrage: nil, lastUpdate: nil, state: .error)
         }
 

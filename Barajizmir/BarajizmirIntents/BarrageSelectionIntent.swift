@@ -35,28 +35,28 @@ struct BarrageEntity: AppEntity {
 
 struct BarrageQuery: EntityQuery {
     func entities(for identifiers: [BarrageEntity.ID]) async throws -> [BarrageEntity] {
-        guard let result = await SharedDataManager.loadCachedBarrages() else {
+        guard let result = await MainActor.run(body: { SharedDataManager.loadCachedBarrages() }) else {
             return []
         }
-        
+
         let intIdentifiers = identifiers.compactMap { Int($0) }
         return result.barrages
             .filter { intIdentifiers.contains($0.id) }
             .map { BarrageEntity(id: $0.id, name: $0.barajAdi) }
     }
-    
+
     func suggestedEntities() async throws -> [BarrageEntity] {
-        guard let result = await SharedDataManager.loadCachedBarrages() else {
+        guard let result = await MainActor.run(body: { SharedDataManager.loadCachedBarrages() }) else {
             return []
         }
-        
+
         return result.barrages
             .sorted { $0.dolulukOrani > $1.dolulukOrani }
             .map { BarrageEntity(id: $0.id, name: $0.barajAdi) }
     }
-    
+
     func entities(matching string: String) async throws -> [BarrageEntity] {
-        guard let result = await SharedDataManager.loadCachedBarrages() else {
+        guard let result = await MainActor.run(body: { SharedDataManager.loadCachedBarrages() }) else {
             return []
         }
         
