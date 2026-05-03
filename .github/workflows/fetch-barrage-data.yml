@@ -44,7 +44,14 @@ jobs:
                   "hacim": b.get("MaksimumSuKapasitesi"),
                   "mevcut_su_durumu": b.get("SuDurumu"),
                   "su_seviyesi": b.get("SuYuksekligi"),
+                  "maksimum_su_yuksekligi": b.get("MaksimumSuYuksekligi"),
+                  "minimum_su_yuksekligi": b.get("MinimumSuYuksekligi"),
+                  "minimum_su_kapasitesi": b.get("MinimumSuKapasitesi"),
+                  "kullanilabilir_gol_su_hacmi": b.get("KullanılabilirGolSuHacmi"),
+                  "tuketilebilir_su_kapasitesi": b.get("TuketilebilirSuKapasitesi"),
                   "guncelleme_tarihi": b.get("DurumTarihi"),
+                  "enlem": b.get("Enlem"),
+                  "boylam": b.get("Boylam"),
               })
 
           # Supabase REST API'ya POST

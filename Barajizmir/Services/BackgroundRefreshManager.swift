@@ -23,7 +23,7 @@ final class BackgroundRefreshManager {
         scheduleNext()
 
         let fetchTask = Task {
-            if let result = await BarrageService.shared.fetchFreshFromAPI() {
+            if let result = await SupabaseService.shared.fetchLatest() {
                 NotificationManager.shared.checkThresholds(against: result.barrages)
             }
             task.setTaskCompleted(success: true)

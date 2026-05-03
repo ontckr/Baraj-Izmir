@@ -34,7 +34,7 @@ actor BarrageService {
             print("✅ \(barrages.count) barrages decoded successfully")
             
             let now = Date()
-            await cacheBarrages(barrages, date: now)
+            await cache(barrages, date: now)
             print("💾 Data cached")
             
             return (barrages, now)
@@ -68,7 +68,7 @@ actor BarrageService {
             let (data, _) = try await URLSession.shared.data(from: apiURL)
             let barrages = try JSONDecoder().decode([Barrage].self, from: data)
             let now = Date()
-            await cacheBarrages(barrages, date: now)
+            await cache(barrages, date: now)
             print("✅ API: \(barrages.count) barrages fetched and cached")
             return (barrages, now)
         } catch {
@@ -77,7 +77,7 @@ actor BarrageService {
         }
     }
 
-    private func cacheBarrages(_ barrages: [Barrage], date: Date) async {
+    func cache(_ barrages: [Barrage], date: Date) async {
         guard let sharedDefaults = sharedUserDefaults else {
             if let encoded = try? JSONEncoder().encode(barrages) {
                 UserDefaults.standard.set(encoded, forKey: cacheKey)

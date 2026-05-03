@@ -29,7 +29,7 @@ class BarrageViewModel: ObservableObject {
 
     private func fetchFreshFromAPI() async {
         isLoadingFromAPI = true
-        if let result = await BarrageService.shared.fetchFreshFromAPI() {
+        if let result = await SupabaseService.shared.fetchLatest() {
             barrages = result.barrages.sorted { $0.dolulukOrani > $1.dolulukOrani }
             lastUpdate = result.lastUpdate
             hasAPIError = false
