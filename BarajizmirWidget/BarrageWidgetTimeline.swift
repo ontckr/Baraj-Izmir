@@ -54,7 +54,7 @@ struct BarrageWidgetTimeline: AppIntentTimelineProvider {
         
         if let lastUpdate = cachedResult?.lastUpdate {
             let dataAge = Date().timeIntervalSince(lastUpdate)
-            shouldFetchFromAPI = dataAge > 43200
+            shouldFetchFromAPI = dataAge > 3600
         } else {
             shouldFetchFromAPI = true
         }
@@ -65,7 +65,7 @@ struct BarrageWidgetTimeline: AppIntentTimelineProvider {
         
         let entry = getEntry(for: barrageId)
         
-        let nextUpdate = Date().addingTimeInterval(43200)
+        let nextUpdate = Date().addingTimeInterval(3600)
         
         return Timeline(entries: [entry], policy: .after(nextUpdate))
     }
@@ -90,25 +90,73 @@ struct BarrageWidgetTimeline: AppIntentTimelineProvider {
     }
 
     private func fetchAndCacheBarrages() async {
-        let apiURL = URL(string: "https://openapi.izmir.bel.tr/api/izsu/barajdurum")!
-        let appGroupIdentifier = "group.onatcakir.Barajizmir"
-        let cacheKey = "cached_barrages"
-        let lastUpdateKey = "last_update_date"
-        
-        guard let sharedDefaults = UserDefaults(suiteName: appGroupIdentifier) else {
-            return
-        }
-        
+        let supabaseURL = "https://tckwpqxptjfnffjvtfqb.supabase.co"
+        let anonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRja3dwcXhwdGpmbmZmanZ0ZnFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4MzI4MTEsImV4cCI6MjA5MzQwODgxMX0.4W1DQdxIag8zMpHqXpxqLOaRoimpzpOULJg_r1IOtXw"
+
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/latest_barrage_snapshots?select=*"),
+              let sharedDefaults = UserDefaults(suiteName: appGroupIdentifier) else { return }
+
+        var request = URLRequest(url: url)
+        request.setValue(anonKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(anonKey)", forHTTPHeaderField: "Authorization")
+
         do {
-            let (data, _) = try await URLSession.shared.data(from: apiURL)
-            let barrages = try JSONDecoder().decode([Barrage].self, from: data)
-            
+            let (data, _) = try await URLSession.shared.data(for: request)
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            let snapshots = try decoder.decode([WidgetBarrageSnapshot].self, from: data)
+            let barrages = snapshots.map(\.barrage)
+
             if let encoded = try? JSONEncoder().encode(barrages) {
-                sharedDefaults.set(encoded, forKey: cacheKey)
-                sharedDefaults.set(Date(), forKey: lastUpdateKey)
+                sharedDefaults.set(encoded, forKey: "cached_barrages")
+                sharedDefaults.set(Date(), forKey: "last_update_date")
             }
         } catch {
-            print("Widget: API fetch failed, using cached data")
+            // Cache'teki veriyi kullanmaya devam et
+        }
+    }
+
+    private struct WidgetBarrageSnapshot: Decodable {
+        let barrageId: Int
+        let barajAdi: String
+        let dolulukOrani: Double
+        let hacim: Double?
+        let mevcutSuDurumu: Double?
+        let suSeviyesi: Double?
+        let maksimumSuYuksekligi: Double?
+        let minimumSuYuksekligi: Double?
+        let guncellemeTarihi: String?
+        let enlem: String?
+        let boylam: String?
+
+        enum CodingKeys: String, CodingKey {
+            case barrageId            = "barrage_id"
+            case barajAdi             = "baraj_adi"
+            case dolulukOrani         = "doluluk_orani"
+            case hacim
+            case mevcutSuDurumu       = "mevcut_su_durumu"
+            case suSeviyesi           = "su_seviyesi"
+            case maksimumSuYuksekligi = "maksimum_su_yuksekligi"
+            case minimumSuYuksekligi  = "minimum_su_yuksekligi"
+            case guncellemeTarihi     = "guncelleme_tarihi"
+            case enlem
+            case boylam
+        }
+
+        var barrage: Barrage {
+            Barrage(
+                id: barrageId,
+                barajAdi: barajAdi,
+                dolulukOrani: dolulukOrani,
+                hacim: hacim,
+                mevcutSuDurumu: mevcutSuDurumu,
+                suSeviyesi: suSeviyesi,
+                maksimumSuYuksekligi: maksimumSuYuksekligi,
+                minimumSuYuksekligi: minimumSuYuksekligi,
+                guncellemeTarihi: guncellemeTarihi,
+                enlem: enlem,
+                boylam: boylam
+            )
         }
     }
     
