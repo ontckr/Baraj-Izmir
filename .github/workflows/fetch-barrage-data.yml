@@ -1,0 +1,69 @@
+name: Fetch Barrage Data
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # her saat başı
+  workflow_dispatch:       # manuel tetikleme (test için)
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch from İzmir API and insert into Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          python3 << 'EOF'
+          import urllib.request
+          import json
+          import os
+          import sys
+
+          # İzmir API'dan veriyi çek
+          api_url = "https://openapi.izmir.bel.tr/api/izsu/barajdurum"
+          try:
+              with urllib.request.urlopen(api_url, timeout=30) as response:
+                  barrages = json.loads(response.read())
+          except Exception as e:
+              print(f"API fetch failed: {e}", file=sys.stderr)
+              sys.exit(1)
+
+          print(f"Fetched {len(barrages)} barrages from API")
+
+          # Supabase'e eklenecek satırları hazırla
+          rows = []
+          for b in barrages:
+              doluluk = b.get("DolulukOrani")
+              if doluluk is None:
+                  continue
+              rows.append({
+                  "barrage_id": b.get("BarajKuyuId"),
+                  "baraj_adi": b.get("BarajKuyuAdi", ""),
+                  "doluluk_orani": doluluk,
+                  "hacim": b.get("MaksimumSuKapasitesi"),
+                  "mevcut_su_durumu": b.get("SuDurumu"),
+                  "su_seviyesi": b.get("SuYuksekligi"),
+                  "guncelleme_tarihi": b.get("DurumTarihi"),
+              })
+
+          # Supabase REST API'ya POST
+          supabase_url = os.environ["SUPABASE_URL"].rstrip("/")
+          supabase_key = os.environ["SUPABASE_KEY"]
+          url = f"{supabase_url}/rest/v1/barrage_snapshots"
+
+          data = json.dumps(rows).encode("utf-8")
+          req = urllib.request.Request(url, data=data, method="POST")
+          req.add_header("apikey", supabase_key)
+          req.add_header("Authorization", f"Bearer {supabase_key}")
+          req.add_header("Content-Type", "application/json")
+          req.add_header("Prefer", "return=minimal")
+
+          try:
+              with urllib.request.urlopen(req) as response:
+                  print(f"Inserted {len(rows)} rows (HTTP {response.status})")
+          except urllib.error.HTTPError as e:
+              body = e.read().decode()
+              print(f"Supabase insert failed: {e.code} {body}", file=sys.stderr)
+              sys.exit(1)
+          EOF
