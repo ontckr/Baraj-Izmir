@@ -92,6 +92,7 @@ struct BarrageListView: View {
                         onSelect(barrage)
                     } label: {
                         BarrageRowView(barrage: barrage)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                 }
