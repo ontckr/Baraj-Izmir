@@ -13,6 +13,7 @@ struct Barrage: Codable, Identifiable, Hashable {
     let guncellemeTarihi: String?
     let enlem: String?
     let boylam: String?
+    var capturedAt: Date? = nil  // Supabase'den gelir, API JSON'unda yok
 
     enum CodingKeys: String, CodingKey {
         case id = "BarajKuyuId"
@@ -27,6 +28,9 @@ struct Barrage: Codable, Identifiable, Hashable {
         case enlem = "Enlem"
         case boylam = "Boylam"
     }
+
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
+    static func == (lhs: Barrage, rhs: Barrage) -> Bool { lhs.id == rhs.id }
 
     var coordinate: CLLocationCoordinate2D? {
         guard let latStr = enlem, let lonStr = boylam,

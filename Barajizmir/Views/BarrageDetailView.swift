@@ -12,6 +12,10 @@ struct BarrageDetailView: View {
             VStack(spacing: 24) {
                 waterVisualization
 
+                if let warning = stalenessWarning {
+                    stalenessView(message: warning)
+                }
+
                 barrageInformation
 
                 BarrageNotificationSection(barrage: barrage)
@@ -162,6 +166,31 @@ struct BarrageDetailView: View {
         }
     }
     
+    private var stalenessWarning: String? {
+        guard let capturedAt = barrage.capturedAt else { return nil }
+        let hours = Calendar.current.dateComponents([.hour], from: capturedAt, to: Date()).hour ?? 0
+        guard hours >= 24 else { return nil }
+        let days = hours / 24
+        if days == 1 { return "Bu veriler 1 gün önce alındı. Baraj geçici olarak güncellenmiyor olabilir." }
+        return "Bu veriler \(days) gün önce alındı. Baraj geçici olarak güncellenmiyor olabilir."
+    }
+
+    private func stalenessView(message: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundColor(.orange)
+            Text(message)
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.orange.opacity(0.1))
+        )
+    }
+
     private func startWaveAnimation() {
         withAnimation(
             .linear(duration: 3.0)

@@ -27,6 +27,7 @@ actor SupabaseService {
         do {
             let (data, _) = try await URLSession.shared.data(for: request)
             let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
             let snapshots = try decoder.decode([BarrageSnapshot].self, from: data)
             let barrages = snapshots.map(\.barrage)
             let now = Date()
@@ -89,6 +90,7 @@ private struct BarrageSnapshot: Decodable {
     let guncellemeTarihi: String?
     let enlem: String?
     let boylam: String?
+    let capturedAt: Date
 
     enum CodingKeys: String, CodingKey {
         case barrageId            = "barrage_id"
@@ -102,10 +104,11 @@ private struct BarrageSnapshot: Decodable {
         case guncellemeTarihi     = "guncelleme_tarihi"
         case enlem
         case boylam
+        case capturedAt           = "captured_at"
     }
 
     var barrage: Barrage {
-        Barrage(
+        var b = Barrage(
             id: barrageId,
             barajAdi: barajAdi,
             dolulukOrani: dolulukOrani,
@@ -118,6 +121,8 @@ private struct BarrageSnapshot: Decodable {
             enlem: enlem,
             boylam: boylam
         )
+        b.capturedAt = capturedAt
+        return b
     }
 }
 
