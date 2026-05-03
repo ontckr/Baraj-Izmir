@@ -44,20 +44,30 @@ Barajizmir/
 │                                            Colors: <30% red, 30-60% orange, 60-80% yellow, ≥80% green
 ├── Views/BarrageListView.swift            — Bottom sheet content: sorted list + pull-to-refresh
 │                                            Takes viewModel + onSelect callback (no NavigationStack inside)
-├── Views/BarrageDetailView.swift          — Detail: water wave animation + data table + share + notification section
+├── Views/BarrageDetailView.swift          — Detail: water wave → staleness warning → data table → chart → notification
+├── Views/BarrageHistoryChartView.swift    — Swift Charts: area+line chart, 1H/1A/6A picker, drag annotation
+│                                            Default range: .week. Calls SupabaseService.fetchHistory (cached 1h)
 ├── Views/BarrageNotificationSection.swift — Toggle + threshold slider (10-90%), permission handling,
 │                                            contextual description (warns if already below threshold)
+├── Views/BarrageProfileCard.swift         — Static dam profile card (unused in views — ready for future placement)
 ├── Views/AboutView.swift                  — App info, data attribution, Siri guide
 ├── Views/WaterWave.swift                  — Custom animatable Shape (sine wave + gravity tilt)
 ├── Views/WaterBubbles.swift               — Bubble particle system (shake-triggered burst)
+├── Models/ChartRange.swift                — Sendable enum: .week/.month/.sixMonth, xLabel/stride helpers
+│                                            granularity + stepDays removed (no longer needed after RPC→table switch)
+├── Models/BarrageStaticProfile.swift      — Static profile data per dam (buildYear, damType, watershed, purpose)
+│                                            Keyed by lowercased partial name. find(for:) does substring match.
 ├── Shared/SharedDataManager.swift         — App Group bridge (app ↔ widget data sharing)
+│                                            loadCachedBarrages() inferred @MainActor — call via await MainActor.run{}
+│                                            from async non-MainActor contexts (BarrageQuery, WidgetTimeline)
 └── Extensions/NumberFormatter+Extensions.swift — Turkish locale number/date formatting
 
 BarajizmirWidget/
 ├── BarrageWidget.swift                    — AppIntentConfiguration, systemSmall only
-├── BarrageWidgetTimeline.swift            — Timeline provider, 12-hour refresh, cache fallback
+├── BarrageWidgetTimeline.swift            — Timeline provider, 24h refresh, Supabase direct fetch
+│                                            getEntry() takes pre-fetched cachedResult param (no double fetch)
 │                                            .stale state: shows last-known data with yellow ! badge
-└── BarrageWidgetView.swift                — Widget UI (4 states: loaded/loading/error/noSelection/stale)
+└── BarrageWidgetView.swift                — Widget UI (5 states: loaded/loading/error/noSelection/stale)
 
 BarajizmirIntents/
 ├── BarrageFillRateIntent.swift            — Siri intent: reads top 6 dams aloud (no app open)
@@ -85,10 +95,10 @@ BarrageFillRateIntent → App Group cache → Siri response
 
 ### Caching Strategy
 
-- Stored in `UserDefaults` via App Group `group.onatcakir.Barajizmir`
-- Widget refreshes every 12 hours; falls back to cache on network failure
-- Siri intent also uses this cache, fetches fresh if >12 hours old
-- `BarrageViewModel.init()` loads cache synchronously for instant display, fetches API in background
+- **Barrage list:** `UserDefaults` via App Group `group.onatcakir.Barajizmir`. `BarrageViewModel.init()` loads synchronously → instant display, then fetches fresh in background.
+- **Widget:** refreshes every 24h; fetches Supabase directly (no longer depends on app opening)
+- **History chart:** in-memory cache inside `SupabaseService` actor, keyed `"{barrageId}_{range}"`, TTL 1 hour. Second visit to same baraj+range hits cache, no network call.
+- **Siri intent:** uses App Group cache, fetches fresh if >12 hours old
 
 ## Native iOS Features In Use
 
@@ -103,7 +113,7 @@ BarrageFillRateIntent → App Group cache → Siri response
 | MapKit (SwiftUI Map API) | `HomeView`, `BarragePinView` |
 | UserNotifications (local) | `NotificationManager`, `BarrageNotificationSection` |
 | BGAppRefreshTask | `BackgroundRefreshManager` |
-| Swift Charts | ❌ Not yet implemented |
+| Swift Charts | `BarrageHistoryChartView` — area+line, drag annotation, 1H/1A/6A |
 
 ## Notification System
 
@@ -126,12 +136,14 @@ User picks a fill-rate threshold per dam in `BarrageDetailView` → `BarrageNoti
 `HomeView` is the root view:
 - Full-screen `Map` behind everything (`.ignoresSafeArea()`)
 - Persistent bottom sheet via `.sheet(isPresented: .constant(true))`
+- Sheet uses **iOS 26 default Liquid Glass** background — do NOT add `.presentationBackground(.regularMaterial)`, it kills the effect
 - Sheet has `NavigationStack` inside; `BarrageDetailView` pushed via `navigationDestination`
 - **Sheet detents:** `[.height(240), .medium]` on list — user cannot drag to full screen
 - **On navigate to detail:** `.large` detent added programmatically, sheet expands to full
 - **On navigate back:** detents revert to `[.height(240), .medium]`, sheet collapses to `.medium`
 - Camera constrained to İzmir bounds (`minLat: 37.9`, `maxLat: 39.4`, `minLon: 26.2`, `maxLon: 28.5`)
 - Coordinates come from API (`Enlem`/`Boylam` fields) — no static lookup needed
+- **List rows:** `.contentShape(Rectangle())` on `BarrageRowView` — required so tapping whitespace also navigates
 
 ## App Store Status
 
@@ -185,12 +197,20 @@ Note: Main app notification slider uses slightly different thresholds (30/60) vs
 - Date formatting: `d MMMM yyyy` Turkish locale
 - API field names are Turkish (CodingKeys handle mapping)
 
+## Swift 6 / SWIFT_APPROACHABLE_CONCURRENCY Notes
+
+Project has `SWIFT_APPROACHABLE_CONCURRENCY = YES`. Key patterns to maintain:
+
+- **`SharedDataManager.loadCachedBarrages()`** — inferred `@MainActor`. Call via `await MainActor.run { SharedDataManager.loadCachedBarrages() }` from any async non-MainActor context (BarrageQuery, WidgetTimeline).
+- **`MotionManager`** CMDeviceMotion handler — wrap body in `MainActor.assumeIsolated { }` since closure runs on `.main` queue but compiler can't prove it statically.
+- **`BackgroundRefreshManager`** — marked `@unchecked Sendable`; use `[weak self]` in BGTaskScheduler register closure.
+- **`SupabaseService.BarrageSnapshot`** — use `func makeBarrage()` not `var barrage: Barrage` to avoid `@MainActor` inference on computed properties returning `Barrage`.
+
 ## Known Issues / TODOs
 
 - `ContentView.swift` is unused — can be removed
 - Widget supports only `systemSmall`; `.systemMedium` and lock screen families not implemented
 - Color thresholds differ between notification slider and widget — should be centralized
-- No historical tracking — app has no persistent store beyond the cache
 
 ## Known Bugs
 
@@ -214,8 +234,8 @@ Note: Main app notification slider uses slightly different thresholds (30/60) vs
 - [ ] **Dam profile pages** — Static content per dam: location, construction year, watershed, historical capacity context
 
 ### Medium Term — Depth & Differentiation
-- [x] **Backend (Supabase)** — GitHub Actions saatlik cron → barrage_snapshots tablosu. iOS app artık direkt Supabase'den beslenyor.
-- [ ] **Swift Charts historical trend** — Week/month fill rate trend per dam
+- [x] **Backend (Supabase)** — GitHub Actions günlük cron → barrage_snapshots tablosu. iOS app artık direkt Supabase'den besleniyor.
+- [x] **Swift Charts historical trend** — Hafta/ay/6ay doluluk grafiği. Direkt tablo sorgusu (RPC yok). 1h cache. Default 1 Hafta.
 - [ ] **Medium widget + lock screen widget** — `.systemMedium`, `accessoryRectangular`, `accessoryCircular`
 
 ### Later — Polish
