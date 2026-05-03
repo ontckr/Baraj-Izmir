@@ -151,7 +151,9 @@ struct BarrageWidgetView: View {
             suSeviyesi: nil,
             maksimumSuYuksekligi: nil,
             minimumSuYuksekligi: nil,
-            guncellemeTarihi: nil
+            guncellemeTarihi: nil,
+            enlem: nil,
+            boylam: nil
         ),
         lastUpdate: Date(),
         state: .loaded
@@ -183,7 +185,9 @@ struct BarrageWidgetView: View {
             suSeviyesi: nil,
             maksimumSuYuksekligi: nil,
             minimumSuYuksekligi: nil,
-            guncellemeTarihi: nil
+            guncellemeTarihi: nil,
+            enlem: nil,
+            boylam: nil
         ),
         lastUpdate: Date(),
         state: .stale

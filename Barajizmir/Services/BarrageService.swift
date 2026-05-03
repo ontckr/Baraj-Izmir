@@ -62,6 +62,21 @@ actor BarrageService {
         }
     }
     
+    /// Fetches fresh data from the API only — no cache fallback. Returns nil on any failure.
+    func fetchFreshFromAPI() async -> (barrages: [Barrage], lastUpdate: Date)? {
+        do {
+            let (data, _) = try await URLSession.shared.data(from: apiURL)
+            let barrages = try JSONDecoder().decode([Barrage].self, from: data)
+            let now = Date()
+            await cacheBarrages(barrages, date: now)
+            print("✅ API: \(barrages.count) barrages fetched and cached")
+            return (barrages, now)
+        } catch {
+            print("❌ API fetch failed: \(error.localizedDescription)")
+            return nil
+        }
+    }
+
     private func cacheBarrages(_ barrages: [Barrage], date: Date) async {
         guard let sharedDefaults = sharedUserDefaults else {
             if let encoded = try? JSONEncoder().encode(barrages) {

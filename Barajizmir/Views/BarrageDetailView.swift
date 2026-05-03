@@ -11,8 +11,10 @@ struct BarrageDetailView: View {
         ScrollView {
             VStack(spacing: 24) {
                 waterVisualization
-                
+
                 barrageInformation
+
+                BarrageNotificationSection(barrage: barrage)
             }
             .padding()
         }
@@ -217,7 +219,9 @@ struct ShareSheet: UIViewControllerRepresentable {
             suSeviyesi: 131.56,
             maksimumSuYuksekligi: 146.0,
             minimumSuYuksekligi: 103.06,
-            guncellemeTarihi: "2026-02-07T00:00:00"
+            guncellemeTarihi: "2026-02-07T00:00:00",
+            enlem: "38.372622",
+            boylam: "27.037422"
         ))
     }
 }

@@ -45,6 +45,13 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		D55A81982FA7E1D3003A0CD3 /* Exceptions for "Barajizmir" folder in "Barajizmir" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = D55EBEF22F2E483D00D64583 /* Barajizmir */;
+		};
 		D5ED3FF92F373DF0004DFB99 /* Exceptions for "BarajizmirWidget" folder in "BarajizmirWidgetExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -67,6 +74,7 @@
 		D55EBEF52F2E483D00D64583 /* Barajizmir */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
+				D55A81982FA7E1D3003A0CD3 /* Exceptions for "Barajizmir" folder in "Barajizmir" target */,
 				D5ED40022F374095004DFB99 /* Exceptions for "Barajizmir" folder in "BarajizmirWidgetExtension" target */,
 			);
 			path = Barajizmir;
@@ -393,6 +401,7 @@
 				DEVELOPMENT_TEAM = ZZHC673TDT;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Barajizmir/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Baraj İzmir";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -432,6 +441,7 @@
 				DEVELOPMENT_TEAM = ZZHC673TDT;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Barajizmir/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Baraj İzmir";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

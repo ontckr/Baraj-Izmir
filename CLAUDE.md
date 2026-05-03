@@ -24,28 +24,45 @@ Real-time dam water level tracker for İzmir, Turkey. Fetches data from the İzm
 
 ```
 Barajizmir/
-├── Models/Barrage.swift                 — Core data model (Codable, maps Turkish API fields)
-├── Services/BarrageService.swift        — Actor-based data fetcher + cache (App Group)
-├── Services/MotionManager.swift         — CoreMotion: gravity tilt + shake detection
-├── Services/ReviewManager.swift         — StoreKit2 review prompt logic
-├── ViewModels/BarrageViewModel.swift    — Main state holder
-├── Views/BarrageListView.swift          — Home screen: sorted list + pull-to-refresh
-├── Views/BarrageDetailView.swift        — Detail: water wave animation + data table + share
-├── Views/AboutView.swift                — App info, data attribution, Siri guide
-├── Views/WaterWave.swift                — Custom animatable Shape (sine wave + gravity tilt)
-├── Views/WaterBubbles.swift             — Bubble particle system (shake-triggered burst)
-├── Shared/SharedDataManager.swift       — App Group bridge (app ↔ widget data sharing)
+├── Models/Barrage.swift                   — Core data model (Codable, Hashable, maps Turkish API fields)
+│                                            Includes enlem/boylam → CLLocationCoordinate2D computed property
+├── Models/NotificationThreshold.swift     — Codable model: barrageId, barajAdi, threshold, isEnabled
+├── Services/BarrageService.swift          — Actor-based data fetcher + cache (App Group)
+│                                            fetchFreshFromAPI() returns nil on failure (no throw)
+├── Services/MotionManager.swift           — CoreMotion: gravity tilt + shake detection
+├── Services/ReviewManager.swift           — StoreKit2 review prompt logic
+├── Services/NotificationManager.swift     — Threshold CRUD (UserDefaults), checkThresholds(), sendNotification()
+│                                            notifiedIds tracking prevents duplicate alerts
+├── Services/BackgroundRefreshManager.swift — BGAppRefreshTask: registers handler, schedules ~1hr refresh
+│                                             on fire: fetchFreshFromAPI → checkThresholds → reschedule
+├── ViewModels/BarrageViewModel.swift      — Cache-first init (UserDefaults instant load), fetchFreshFromAPI
+│                                            calls WidgetCenter.reloadAllTimelines() + checkThresholds() on success
+├── Views/HomeView.swift                   — Root view: full-screen MapKit map + persistent bottom sheet
+│                                            Sheet detents: [.height(240), .medium] on list, adds .large on detail
+│                                            Camera constrained to İzmir bounds via onMapCameraChange
+├── Views/BarragePinView.swift             — Custom map annotation: colored circle pin + triangle pointer
+│                                            Colors: <30% red, 30-60% orange, 60-80% yellow, ≥80% green
+├── Views/BarrageListView.swift            — Bottom sheet content: sorted list + pull-to-refresh
+│                                            Takes viewModel + onSelect callback (no NavigationStack inside)
+├── Views/BarrageDetailView.swift          — Detail: water wave animation + data table + share + notification section
+├── Views/BarrageNotificationSection.swift — Toggle + threshold slider (10-90%), permission handling,
+│                                            contextual description (warns if already below threshold)
+├── Views/AboutView.swift                  — App info, data attribution, Siri guide
+├── Views/WaterWave.swift                  — Custom animatable Shape (sine wave + gravity tilt)
+├── Views/WaterBubbles.swift               — Bubble particle system (shake-triggered burst)
+├── Shared/SharedDataManager.swift         — App Group bridge (app ↔ widget data sharing)
 └── Extensions/NumberFormatter+Extensions.swift — Turkish locale number/date formatting
 
 BarajizmirWidget/
-├── BarrageWidget.swift                  — AppIntentConfiguration, systemSmall only
-├── BarrageWidgetTimeline.swift          — Timeline provider, 12-hour refresh, cache fallback
-└── BarrageWidgetView.swift              — Widget UI (4 states: loaded/loading/error/noSelection)
+├── BarrageWidget.swift                    — AppIntentConfiguration, systemSmall only
+├── BarrageWidgetTimeline.swift            — Timeline provider, 12-hour refresh, cache fallback
+│                                            .stale state: shows last-known data with yellow ! badge
+└── BarrageWidgetView.swift                — Widget UI (4 states: loaded/loading/error/noSelection/stale)
 
 BarajizmirIntents/
-├── BarrageFillRateIntent.swift          — Siri intent: reads top 6 dams aloud (no app open)
-├── BarrageSelectionIntent.swift         — Widget config intent + BarrageEntity + BarrageQuery
-└── BarajizmirAppShortcuts.swift         — 41 Siri voice phrases (Turkish)
+├── BarrageFillRateIntent.swift            — Siri intent: reads top 6 dams aloud (no app open)
+├── BarrageSelectionIntent.swift           — Widget config intent + BarrageEntity + BarrageQuery
+└── BarajizmirAppShortcuts.swift           — 41 Siri voice phrases (Turkish)
 ```
 
 ### Data Flow
@@ -53,10 +70,14 @@ BarajizmirIntents/
 ```
 API (izmir.bel.tr) → BarrageService (actor) → UserDefaults (App Group cache)
                                              ↓
-                              BarrageViewModel (@MainActor) → SwiftUI Views
+                          BarrageViewModel (@MainActor) → SwiftUI Views
                                              ↓
-                              BarrageWidgetTimeline → Widget
-                              BarrageFillRateIntent → Siri response
+                          WidgetCenter.reloadAllTimelines()  (after every successful fetch)
+                          NotificationManager.checkThresholds()  (after every successful fetch)
+                                             ↓
+                          BarrageWidgetTimeline → Widget
+                          BarrageFillRateIntent → Siri response
+                          BGAppRefreshTask → background fetch → checkThresholds
 ```
 
 ### Caching Strategy
@@ -64,6 +85,7 @@ API (izmir.bel.tr) → BarrageService (actor) → UserDefaults (App Group cache)
 - Stored in `UserDefaults` via App Group `group.onatcakir.Barajizmir`
 - Widget refreshes every 12 hours; falls back to cache on network failure
 - Siri intent also uses this cache, fetches fresh if >12 hours old
+- `BarrageViewModel.init()` loads cache synchronously for instant display, fetches API in background
 
 ## Native iOS Features In Use
 
@@ -75,9 +97,38 @@ API (izmir.bel.tr) → BarrageService (actor) → UserDefaults (App Group cache)
 | StoreKit2 review prompt | `ReviewManager` |
 | UIActivityViewController share sheet | `BarrageDetailView` |
 | App Groups (cross-target data) | `BarrageService`, `SharedDataManager` |
+| MapKit (SwiftUI Map API) | `HomeView`, `BarragePinView` |
+| UserNotifications (local) | `NotificationManager`, `BarrageNotificationSection` |
+| BGAppRefreshTask | `BackgroundRefreshManager` |
 | Swift Charts | ❌ Not yet implemented |
-| MapKit | ❌ Not yet implemented |
-| UserNotifications | ❌ Not yet implemented |
+
+## Notification System
+
+User picks a fill-rate threshold per dam in `BarrageDetailView` → `BarrageNotificationSection`.
+
+**Threshold storage:** `UserDefaults` (standard, not App Group) under key `notification_thresholds` as `[Int: NotificationThreshold]` JSON.
+
+**Trigger logic** (`NotificationManager.checkThresholds`):
+- Fires when `dolulukOrani <= threshold` AND barrage not already in `notified_barrage_ids`
+- Resets notified state when fill rate rises back above threshold (so next drop triggers again)
+
+**Background delivery** (`BackgroundRefreshManager`):
+- BGAppRefreshTask identifier: `onatcakir.Barajizmir.refresh`
+- Scheduled with `earliestBeginDate` of 1 hour; iOS fires it based on usage patterns
+- **Xcode setup required:** Signing & Capabilities → Background Modes → Background fetch ✓
+- **Info.plist required:** `BGTaskSchedulerPermittedIdentifiers` Array → Item 0 (String): `onatcakir.Barajizmir.refresh`
+
+## Home Screen Layout
+
+`HomeView` is the root view:
+- Full-screen `Map` behind everything (`.ignoresSafeArea()`)
+- Persistent bottom sheet via `.sheet(isPresented: .constant(true))`
+- Sheet has `NavigationStack` inside; `BarrageDetailView` pushed via `navigationDestination`
+- **Sheet detents:** `[.height(240), .medium]` on list — user cannot drag to full screen
+- **On navigate to detail:** `.large` detent added programmatically, sheet expands to full
+- **On navigate back:** detents revert to `[.height(240), .medium]`, sheet collapses to `.medium`
+- Camera constrained to İzmir bounds (`minLat: 37.9`, `maxLat: 39.4`, `minLon: 26.2`, `maxLon: 28.5`)
+- Coordinates come from API (`Enlem`/`Boylam` fields) — no static lookup needed
 
 ## App Store Status
 
@@ -87,16 +138,17 @@ Apple's position: the app is a content aggregator with limited native functional
 
 ### Root Cause
 
-The app's core loop is: **open → see a list → tap for detail → close.** There is nothing for the user to *do*. Apple's 4.2 standard requires apps to offer compelling capabilities or enable users to do something they couldn't do before.
+The app's core loop was: **open → see a list → tap for detail → close.** Nothing for the user to *do*.
 
-### Planned Features to Address Rejection
+### Features Added to Address Rejection
 
-See the "Roadmap" section below.
+- ✅ **MapKit view** — Full-screen map with color-coded pins, camera constrained to İzmir
+- ✅ **Threshold notifications** — User sets per-dam alert threshold, background delivery via BGAppRefreshTask
 
 ## Barrage Data Model
 
 ```swift
-struct Barrage: Codable, Identifiable {
+struct Barrage: Codable, Identifiable, Hashable {
     let id: Int
     let barajAdi: String           // Dam name
     let dolulukOrani: Double       // Fill rate %
@@ -106,19 +158,22 @@ struct Barrage: Codable, Identifiable {
     let maksimumSuYuksekligi: Double?
     let minimumSuYuksekligi: Double?
     let guncellemeTarihi: String?  // ISO date string
+    let enlem: String?             // CodingKey: "Enlem"
+    let boylam: String?            // CodingKey: "Boylam"
+    // computed: var coordinate: CLLocationCoordinate2D?
 }
 ```
 
-## Color Coding (Consistent Across App + Widget)
+## Color Coding
 
-| Fill Rate | Color |
-|-----------|-------|
-| < 30% | Red |
-| 30–60% | Orange |
-| 60–80% | Yellow |
-| ≥ 80% | Green |
+| Fill Rate | Color | Used in |
+|-----------|-------|---------|
+| < 30% | Red | App, Widget, Map pins |
+| 30–60% | Orange | App, Widget, Map pins |
+| 60–80% | Yellow/Gold | App, Widget, Map pins |
+| ≥ 80% | Green | App, Widget, Map pins |
 
-Note: Main app uses slightly different thresholds (40%/70%) vs widget (30%/60%/80%). Should be unified.
+Note: Main app notification slider uses slightly different thresholds (30/60) vs widget (30/60/80). Should be unified into a shared constant.
 
 ## Localization
 
@@ -129,22 +184,18 @@ Note: Main app uses slightly different thresholds (40%/70%) vs widget (30%/60%/8
 
 ## Known Issues / TODOs
 
-- `ContentView.swift` is unused (just delegates to `BarrageListView`) — can be removed
+- `ContentView.swift` is unused — can be removed
 - Widget supports only `systemSmall`; `.systemMedium` and lock screen families not implemented
-- Color thresholds differ between app and widget (should be centralized)
+- Color thresholds differ between notification slider and widget — should be centralized
 - No historical tracking — app has no persistent store beyond the cache
 
 ## Known Bugs
 
 ### Bug 1 — Widget reverts to "Baraj Seçin" when a barrage disappears from API
-**Root cause:** `BarrageWidgetTimeline` calls `SharedDataManager.getBarrage(byId:)` → returns `nil` because the barrage ID is no longer in cache → widget falls into `.noSelection` state.  
-**Fix:** When selected barrage is missing from latest fetch, keep last known `Barrage` data in widget entry and show it with a staleness indicator. Never drop to `.noSelection` unless the user has never selected a barrage.  
-**Status:** Fixed — Added `.stale` WidgetState + per-barrage last-known cache (keyed `last_known_barrage_{id}` in App Group UserDefaults). `getEntry(for:)` saves on hit, falls back to last-known on miss, shows stale data with yellow `!` badge in widget view.
+**Status:** Fixed — Added `.stale` WidgetState + per-barrage last-known cache (keyed `last_known_barrage_{id}` in App Group UserDefaults). Shows stale data with yellow `!` badge instead of reverting to `.noSelection`.
 
 ### Bug 2 — Widget shows stale data after app pull-to-refresh
-**Root cause:** Widget timeline refreshes on its own 12-hour cycle. App refresh (`BarrageViewModel.loadBarrages`) updates the shared cache but never signals WidgetKit to reload.  
-**Fix:** Call `WidgetCenter.reloadAllTimelines()` inside `BarrageViewModel` after a successful data fetch.  
-**Status:** Fixed — `import WidgetKit` + `WidgetCenter.shared.reloadAllTimelines()` added to `BarrageViewModel.loadBarrages()` after successful fetch.
+**Status:** Fixed — `WidgetCenter.shared.reloadAllTimelines()` called in `BarrageViewModel.fetchFreshFromAPI()` after every successful fetch.
 
 ---
 
@@ -152,29 +203,28 @@ Note: Main app uses slightly different thresholds (40%/70%) vs widget (30%/60%/8
 
 ### Immediate — Bug Fixes
 - [x] **Bug 2 fix:** `WidgetCenter.reloadAllTimelines()` in `BarrageViewModel` after successful fetch
-- [x] **Bug 1 fix:** Widget graceful degradation — show last known data with "eski veri" label instead of reverting to `.noSelection`
+- [x] **Bug 1 fix:** Widget graceful degradation — show last known data with "eski veri" label
 
 ### Short Term — App Store Rejection Fix (Guideline 4.2 / 4.2.2)
-Apple rejected twice: app seen as a content aggregator with no native actions. Need features where the user *does* something, not just views data.
-
-- [ ] **Threshold notifications** — User picks a dam and a fill-rate threshold → `UserNotifications` alert when crossed. Strongest argument against 4.2 rejection (native action, personalization).
-- [ ] **MapKit view** — Barajlar harita üzerinde renkli pinlerle. Tap → detail. Spatial experience, not replicable as a web page.
-- [ ] **Dam profile pages** — Static content per dam: location, construction year, watershed, historical capacity context. Counters the "only aggregated internet content" charge (4.2.2).
+- [x] **MapKit view** — Full-screen map with color-coded pins, İzmir camera bounds
+- [x] **Threshold notifications** — Per-dam alert threshold + BGAppRefreshTask background delivery
+- [ ] **Dam profile pages** — Static content per dam: location, construction year, watershed, historical capacity context
 
 ### Medium Term — Depth & Differentiation
-- [ ] **Backend (Supabase)** — Hourly snapshot of API data. Builds a proprietary historical dataset over time that web has no equivalent of.
-- [ ] **Swift Charts historical trend** — Week/month fill rate trend per dam, powered by backend snapshots. Transforms app from snapshot viewer to analytics tool.
-- [ ] **Medium widget + lock screen widget** — Expand `BarrageWidget` to `.systemMedium` and `WidgetFamily.accessoryRectangular` / `accessoryCircular` lock screen families.
+- [ ] **Backend (Supabase)** — Hourly snapshot of API data for proprietary historical dataset
+- [ ] **Swift Charts historical trend** — Week/month fill rate trend per dam
+- [ ] **Medium widget + lock screen widget** — `.systemMedium`, `accessoryRectangular`, `accessoryCircular`
 
 ### Later — Polish
-- [ ] **Favorites** — Pin dams to top of list. `UserDefaults` persistence.
-- [ ] **Unify color thresholds** — App uses 40%/70%, widget uses 30%/60%/80%. Centralize into a shared constant.
-- [ ] **Remove `ContentView.swift`** — Unused file, just wraps `BarrageListView`.
-- [ ] **Comparison view** — Side-by-side fill rate for multiple dams.
+- [ ] **Favorites** — Pin dams to top of list, `UserDefaults` persistence
+- [ ] **Unify color thresholds** — Centralize into a shared constant across app + widget
+- [ ] **Remove `ContentView.swift`** — Unused file
+- [ ] **Comparison view** — Side-by-side fill rate for multiple dams
 
 ## Development Notes
 
 - Xcode project; no SPM external dependencies
 - Build runs on iOS 17+ (App Intents API requirement)
 - App Group identifier: `group.onatcakir.Barajizmir`
+- BGTask identifier: `onatcakir.Barajizmir.refresh`
 - Privacy policy hosted on GitHub Pages

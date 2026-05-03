@@ -7,37 +7,37 @@ class BarrageViewModel: ObservableObject {
     @Published var barrages: [Barrage] = []
     @Published var lastUpdate: Date?
     @Published var isRefreshing = false
-    
+    @Published var isLoadingFromAPI = false
+    @Published var hasAPIError = false
+
     init() {
-        print("🚀 BarrageViewModel initializing...")
+        // Show cached data instantly — no waiting for network
+        if let cached = SharedDataManager.loadCachedBarrages() {
+            barrages = cached.barrages.sorted { $0.dolulukOrani > $1.dolulukOrani }
+            lastUpdate = cached.lastUpdate
+        }
         Task {
-            await loadBarrages()
+            await fetchFreshFromAPI()
         }
     }
-    
-    func loadBarrages() async {
-        print("📥 Loading barrage data...")
-        if let result = await BarrageService.shared.fetchBarrages() {
-            print("✅ Received \(result.barrages.count) barrages, sorting...")
+
+    func refresh() async {
+        isRefreshing = true
+        await fetchFreshFromAPI()
+        isRefreshing = false
+    }
+
+    private func fetchFreshFromAPI() async {
+        isLoadingFromAPI = true
+        if let result = await BarrageService.shared.fetchFreshFromAPI() {
             barrages = result.barrages.sorted { $0.dolulukOrani > $1.dolulukOrani }
             lastUpdate = result.lastUpdate
-            print("✅ UI updated - displaying \(barrages.count) barrages")
-
-            for barrage in barrages {
-                print("   📊 \(barrage.barajAdi): %\(barrage.dolulukOrani)")
-            }
-
+            hasAPIError = false
             WidgetCenter.shared.reloadAllTimelines()
+            NotificationManager.shared.checkThresholds(against: barrages)
         } else {
-            print("❌ No data received!")
+            hasAPIError = true
         }
-    }
-    
-    func refresh() async {
-        print("🔄 Refresh started...")
-        isRefreshing = true
-        await loadBarrages()
-        isRefreshing = false
-        print("✅ Refresh completed")
+        isLoadingFromAPI = false
     }
 }

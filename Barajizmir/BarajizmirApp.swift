@@ -10,6 +10,8 @@ import SwiftUI
 @main
 struct BarajizmirApp: App {
     init() {
+        BackgroundRefreshManager.shared.registerHandler()
+        BackgroundRefreshManager.shared.scheduleNext()
         Task { @MainActor in
             ReviewManager.shared.incrementLaunchCount()
         }
@@ -17,7 +19,7 @@ struct BarajizmirApp: App {
     
     var body: some Scene {
         WindowGroup {
-            BarrageListView()
+            HomeView()
         }
     }
 }
